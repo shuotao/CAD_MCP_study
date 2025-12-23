@@ -65,19 +65,17 @@ namespace AutoCADMCP
             {
                 Text = "Start Server",
                 ShowText = true,
-                ShowImage = true,
+                ShowImage = false, // No icons in repo, disable to avoid blank space
                 Size = RibbonItemSize.Large,
                 Orientation = System.Windows.Controls.Orientation.Vertical,
                 CommandHandler = new RelayCommand(StartServer)
             };
             
-            // Note: You would typically load an icon here
-            
             RibbonButton btnStop = new RibbonButton
             {
                 Text = "Stop Server",
                 ShowText = true,
-                ShowImage = true,
+                ShowImage = false, // No icons in repo
                 Size = RibbonItemSize.Large,
                 Orientation = System.Windows.Controls.Orientation.Vertical,
                 CommandHandler = new RelayCommand(StopServer)
