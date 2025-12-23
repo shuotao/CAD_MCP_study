@@ -57,10 +57,83 @@ pip install -r requirements.txt
 
 1. **啟動 AutoCAD**：Ribbon 會出現 "MCP Tools"。
 2. **啟動監聽**：點擊 "Start Server" 按鈕。
-3. **設定 AI**：
-   在 `claude_desktop_config.json` 中指向 `MCP-Server/server.py`。
-4. **開始使用**：
-   AI 現在可以透過指令控制 AutoCAD。
+3. **設定 AI 平台**：依據您使用的 AI 工具，參考下方設定。
+4. **開始使用**：AI 現在可以透過指令控制 AutoCAD。
+
+---
+
+## 🤖 AI 平台設定指南
+
+本專案支援多種 AI 平台，請依據您的環境選擇對應設定：
+
+### 方法 1：Claude Desktop
+
+將以下內容加入 `%APPDATA%\Claude\claude_desktop_config.json`：
+
+```json
+{
+  "mcpServers": {
+    "autocad": {
+      "command": "python",
+      "args": ["C:\\Users\\01102088\\Desktop\\AUTODESK MCP\\MCP-Server\\server.py"]
+    }
+  }
+}
+```
+
+> 📁 範例檔案：`configs/claude_desktop.json`
+
+---
+
+### 方法 2：VS Code (Copilot / Continue)
+
+在 VS Code 設定中加入 MCP Server：
+
+```json
+{
+  "servers": {
+    "autocad": {
+      "command": "python",
+      "args": ["MCP-Server/server.py"],
+      "cwd": "${workspaceFolder}"
+    }
+  }
+}
+```
+
+> 📁 範例檔案：`configs/vscode_mcp.json`
+
+---
+
+### 方法 3：Google Antigravity (Gemini)
+
+在 Antigravity 設定中加入：
+
+```json
+{
+  "mcpServers": {
+    "autocad": {
+      "command": "python",
+      "args": ["MCP-Server/server.py"],
+      "cwd": "C:\\Users\\01102088\\Desktop\\AUTODESK MCP"
+    }
+  }
+}
+```
+
+> 📁 範例檔案：`configs/antigravity_settings.json`
+
+---
+
+### 方法 4：內嵌 AutoCAD Add-in 聊天視窗 (開發中)
+
+未來版本將支援直接在 AutoCAD Ribbon 內嵌 AI 聊天視窗，無需外部 AI 工具。
+
+**規劃功能：**
+- 內建聊天介面
+- 支援 OpenAI / Azure OpenAI API
+- 指令歷史記錄
+- 自動補全建議
 
 ---
 
