@@ -11,7 +11,7 @@
 
     <Components>
         <RuntimeRequirements OS="Win64" Platform="AutoCAD*" SeriesMin="R24.0" SeriesMax="R25.0" />
-        <ComponentEntry AppName="AutoCADMCP" Version="1.0.0" ModuleName="./Contents/AutoCADMCP.dll" LoadOnCommandInvocation="True">
+        <ComponentEntry AppName="AutoCADMCP" Version="1.0.0" ModuleName="./Contents/AutoCADMCP.dll" LoadOnAutoCADStartup="True">
             <Commands GroupName="MCP">
                 <Command Local="STARTMCP" Global="STARTMCP" />
             </Commands>
