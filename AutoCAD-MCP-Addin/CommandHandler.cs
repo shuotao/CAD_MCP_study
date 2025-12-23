@@ -119,41 +119,55 @@ namespace AutoCADMCP.Server
 
         private static string RenameBlock(Document doc, Dictionary<string, object> args)
         {
-            string oldName = args["old_name"].ToString();
-            string newName = args["new_name"].ToString();
-
-            using (Transaction tr = doc.TransactionManager.StartTransaction())
+            try
             {
-                BlockTable bt = (BlockTable)tr.GetObject(doc.Database.BlockTableId, OpenMode.ForWrite);
-                
-                if (!bt.Has(oldName)) return $"Block '{oldName}' not found.";
-                if (bt.Has(newName)) return $"Block '{newName}' already exists.";
+                if (!args.ContainsKey("old_name") || !args.ContainsKey("new_name"))
+                    return "Error: Missing block names.";
 
-                BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bt[oldName], OpenMode.ForWrite);
-                btr.Name = newName;
-                
-                tr.Commit();
+                string oldName = args["old_name"].ToString();
+                string newName = args["new_name"].ToString();
+
+                using (Transaction tr = doc.TransactionManager.StartTransaction())
+                {
+                    BlockTable bt = (BlockTable)tr.GetObject(doc.Database.BlockTableId, OpenMode.ForWrite);
+                    
+                    if (!bt.Has(oldName)) return $"Error: Block '{oldName}' not found.";
+                    if (bt.Has(newName)) return $"Error: Block '{newName}' already exists.";
+
+                    BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bt[oldName], OpenMode.ForWrite);
+                    btr.Name = newName;
+                    
+                    tr.Commit();
+                    return $"Successfully renamed block '{oldName}' to '{newName}'.";
+                }
             }
-            return $"Renamed block '{oldName}' to '{newName}'.";
+            catch (Exception ex) { return $"Error renaming block: {ex.Message}"; }
         }
 
         private static string UpdateBlockDescription(Document doc, Dictionary<string, object> args)
         {
-            string name = args["name"].ToString();
-            string desc = args["description"].ToString();
-
-            using (Transaction tr = doc.TransactionManager.StartTransaction())
+            try
             {
-                BlockTable bt = (BlockTable)tr.GetObject(doc.Database.BlockTableId, OpenMode.ForRead);
-                
-                if (!bt.Has(name)) return $"Block '{name}' not found.";
+                if (!args.ContainsKey("name") || !args.ContainsKey("description"))
+                    return "Error: Missing parameters.";
 
-                BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bt[name], OpenMode.ForWrite);
-                btr.Comments = desc;
-                
-                tr.Commit();
+                string name = args["name"].ToString();
+                string desc = args["description"].ToString();
+
+                using (Transaction tr = doc.TransactionManager.StartTransaction())
+                {
+                    BlockTable bt = (BlockTable)tr.GetObject(doc.Database.BlockTableId, OpenMode.ForRead);
+                    
+                    if (!bt.Has(name)) return $"Error: Block '{name}' not found.";
+
+                    BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bt[name], OpenMode.ForWrite);
+                    btr.Comments = desc;
+                    
+                    tr.Commit();
+                    return $"Updated description for block '{name}'.";
+                }
             }
-            return $"Updated description for block '{name}'.";
+            catch (Exception ex) { return $"Error updating block description: {ex.Message}"; }
         }
 
         private static string FindOverlaps(Document doc, Dictionary<string, object> args)
@@ -300,98 +314,112 @@ namespace AutoCADMCP.Server
 
         private static string CreateLayer(Document doc, Dictionary<string, object> args)
         {
-            string name = args["name"].ToString();
-            short colorIndex = Convert.ToInt16(args["color"]);
-
-            using (Transaction tr = doc.TransactionManager.StartTransaction())
+            try
             {
-                LayerTable lt = (LayerTable)tr.GetObject(doc.Database.LayerTableId, OpenMode.ForRead);
-                
-                if (!lt.Has(name))
+                if (!args.ContainsKey("name")) return "Error: Missing layer name.";
+                string name = args["name"].ToString();
+                short colorIndex = args.ContainsKey("color") ? Convert.ToInt16(args["color"]) : (short)7;
+
+                using (Transaction tr = doc.TransactionManager.StartTransaction())
                 {
-                    LayerTableRecord ltr = new LayerTableRecord();
-                    ltr.Name = name;
-                    ltr.Color = Color.FromColorIndex(ColorMethod.ByAci, colorIndex);
+                    LayerTable lt = (LayerTable)tr.GetObject(doc.Database.LayerTableId, OpenMode.ForRead);
                     
-                    lt.UpgradeOpen();
-                    lt.Add(ltr);
-                    tr.AddNewlyCreatedDBObject(ltr, true);
-                    tr.Commit();
-                    return $"Created layer '{name}' with color {colorIndex}";
+                    if (!lt.Has(name))
+                    {
+                        LayerTableRecord ltr = new LayerTableRecord();
+                        ltr.Name = name;
+                        ltr.Color = Color.FromColorIndex(ColorMethod.ByAci, colorIndex);
+                        
+                        lt.UpgradeOpen();
+                        lt.Add(ltr);
+                        tr.AddNewlyCreatedDBObject(ltr, true);
+                        tr.Commit();
+                        return $"Created layer '{name}' with color {colorIndex}";
+                    }
+                    return $"Layer '{name}' already exists";
                 }
-                return $"Layer '{name}' already exists";
             }
+            catch (Exception ex) { return $"Error creating layer: {ex.Message}"; }
         }
 
         private static string DrawLine(Document doc, Dictionary<string, object> args)
         {
-            double x1 = Convert.ToDouble(args["start_x"]);
-            double y1 = Convert.ToDouble(args["start_y"]);
-            double x2 = Convert.ToDouble(args["end_x"]);
-            double y2 = Convert.ToDouble(args["end_y"]);
-            string layer = args.ContainsKey("layer") ? args["layer"].ToString() : "0";
-
-            using (Transaction tr = doc.TransactionManager.StartTransaction())
+            try
             {
-                BlockTable bt = (BlockTable)tr.GetObject(doc.Database.BlockTableId, OpenMode.ForRead);
-                BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
+                if (!args.ContainsKey("start_x") || !args.ContainsKey("start_y") || !args.ContainsKey("end_x") || !args.ContainsKey("end_y"))
+                    return "Error: Missing coordinates.";
 
-                Line line = new Line(new Point3d(x1, y1, 0), new Point3d(x2, y2, 0));
-                line.Layer = layer;
+                double x1 = Convert.ToDouble(args["start_x"]);
+                double y1 = Convert.ToDouble(args["start_y"]);
+                double x2 = Convert.ToDouble(args["end_x"]);
+                double y2 = Convert.ToDouble(args["end_y"]);
+                string layer = args.ContainsKey("layer") ? args["layer"].ToString() : "0";
 
-                btr.AppendEntity(line);
-                tr.AddNewlyCreatedDBObject(line, true);
-                tr.Commit();
-                
-                return $"Drawn line from ({x1},{y1}) to ({x2},{y2}) on layer {layer}";
+                using (Transaction tr = doc.TransactionManager.StartTransaction())
+                {
+                    BlockTable bt = (BlockTable)tr.GetObject(doc.Database.BlockTableId, OpenMode.ForRead);
+                    BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
+
+                    Line line = new Line(new Point3d(x1, y1, 0), new Point3d(x2, y2, 0));
+                    line.Layer = layer;
+
+                    btr.AppendEntity(line);
+                    tr.AddNewlyCreatedDBObject(line, true);
+                    tr.Commit();
+                    
+                    return $"Drawn line from ({x1},{y1}) to ({x2},{y2}) on layer {layer}";
+                }
             }
+            catch (Exception ex) { return $"Error drawing line: {ex.Message}"; }
         }
 
         private static string DrawWall(Document doc, Dictionary<string, object> args)
         {
-            // Simplified wall drawing (double line)
-            double x1 = Convert.ToDouble(args["start_x"]);
-            double y1 = Convert.ToDouble(args["start_y"]);
-            double x2 = Convert.ToDouble(args["end_x"]);
-            double y2 = Convert.ToDouble(args["end_y"]);
-            double width = Convert.ToDouble(args["width"]); // Wall width
-            
-            // Calculate offset vector
-            Vector3d dir = new Point3d(x2, y2, 0) - new Point3d(x1, y1, 0);
-            Vector3d perp = dir.GetPerpendicularVector().GetNormal() * (width / 2.0);
-
-            using (Transaction tr = doc.TransactionManager.StartTransaction())
+            try
             {
-                BlockTable bt = (BlockTable)tr.GetObject(doc.Database.BlockTableId, OpenMode.ForRead);
-                BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
+                if (!args.ContainsKey("start_x") || !args.ContainsKey("start_y") || !args.ContainsKey("end_x") || !args.ContainsKey("end_y") || !args.ContainsKey("width"))
+                    return "Error: Missing wall parameters.";
 
-                // Ensure layer exists
-                string layer = "A-WALL";
-                LayerTable lt = (LayerTable)tr.GetObject(doc.Database.LayerTableId, OpenMode.ForRead);
-                if (!lt.Has(layer))
+                double x1 = Convert.ToDouble(args["start_x"]);
+                double y1 = Convert.ToDouble(args["start_y"]);
+                double x2 = Convert.ToDouble(args["end_x"]);
+                double y2 = Convert.ToDouble(args["end_y"]);
+                double width = Convert.ToDouble(args["width"]); 
+                
+                Vector3d dir = new Point3d(x2, y2, 0) - new Point3d(x1, y1, 0);
+                if (dir.Length < Tolerance.Global.EqualPoint) return "Error: Wall length is zero.";
+                
+                Vector3d perp = dir.GetPerpendicularVector().GetNormal() * (width / 2.0);
+
+                using (Transaction tr = doc.TransactionManager.StartTransaction())
                 {
-                    LayerTableRecord ltr = new LayerTableRecord();
-                    ltr.Name = layer;
-                    ltr.Color = Color.FromColorIndex(ColorMethod.ByAci, 1); // Red
-                    lt.UpgradeOpen();
-                    lt.Add(ltr);
-                    tr.AddNewlyCreatedDBObject(ltr, true);
+                    BlockTable bt = (BlockTable)tr.GetObject(doc.Database.BlockTableId, OpenMode.ForRead);
+                    BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
+
+                    string layer = "A-WALL";
+                    LayerTable lt = (LayerTable)tr.GetObject(doc.Database.LayerTableId, OpenMode.ForRead);
+                    if (!lt.Has(layer))
+                    {
+                        LayerTableRecord ltr = new LayerTableRecord();
+                        ltr.Name = layer;
+                        ltr.Color = Color.FromColorIndex(ColorMethod.ByAci, 1);
+                        lt.UpgradeOpen();
+                        lt.Add(ltr);
+                        tr.AddNewlyCreatedDBObject(ltr, true);
+                    }
+
+                    Line l1 = new Line(new Point3d(x1, y1, 0) + perp, new Point3d(x2, y2, 0) + perp);
+                    Line l2 = new Line(new Point3d(x1, y1, 0) - perp, new Point3d(x2, y2, 0) - perp);
+                    l1.Layer = layer; l2.Layer = layer;
+
+                    btr.AppendEntity(l1); btr.AppendEntity(l2);
+                    tr.AddNewlyCreatedDBObject(l1, true); tr.AddNewlyCreatedDBObject(l2, true);
+                    
+                    tr.Commit();
+                    return $"Drawn wall from ({x1},{y1}) to ({x2},{y2}) width {width}";
                 }
-
-                Line l1 = new Line(new Point3d(x1, y1, 0) + perp, new Point3d(x2, y2, 0) + perp);
-                Line l2 = new Line(new Point3d(x1, y1, 0) - perp, new Point3d(x2, y2, 0) - perp);
-                
-                l1.Layer = layer;
-                l2.Layer = layer;
-
-                btr.AppendEntity(l1);
-                btr.AppendEntity(l2);
-                tr.AddNewlyCreatedDBObject(l1, true);
-                tr.AddNewlyCreatedDBObject(l2, true);
-                
-                tr.Commit();
-                return $"Drawn wall from ({x1},{y1}) to ({x2},{y2}) width {width}";
             }
+            catch (Exception ex) { return $"Error drawing wall: {ex.Message}"; }
         }
 
         private static string GetLayers(Document doc)

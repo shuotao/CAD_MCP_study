@@ -17,7 +17,12 @@ namespace AutoCADMCP
         {
             Application.Idle -= Application_Idle;
             CreateRibbon();
-            Application.DocumentManager.MdiActiveDocument.Editor.WriteMessage("\n[MCP] AutoCAD MCP Tools Loaded.\n");
+            
+            var doc = Application.DocumentManager.MdiActiveDocument;
+            if (doc != null)
+            {
+                doc.Editor.WriteMessage("\n[MCP] AutoCAD MCP Tools Loaded.\n");
+            }
         }
 
         public void Terminate()
