@@ -68,6 +68,7 @@ pip install -r requirements.txt
    | `get_layers` | 查詢圖層 | 無 |
    | `find_overlaps` | 查詢重疊線段 | layer (optional) |
    | `clean_overlaps` | 刪除重疊短線 | layer (optional) |
+   | `connect_lines` | 線段接合確保 | layer, tolerance |
 
 ---
 

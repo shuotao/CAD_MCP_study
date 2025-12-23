@@ -25,9 +25,66 @@ namespace AutoCADMCP.Server
                     return FindOverlaps(doc, args);
                 case "clean_overlaps":
                     return CleanOverlaps(doc, args);
+                case "connect_lines":
+                    return ConnectLines(doc, args);
                 default:
                     return $"Unknown command: {command}";
             }
+        }
+
+        private static string ConnectLines(Document doc, Dictionary<string, object> args)
+        {
+            string layerFilter = args.ContainsKey("layer") ? args["layer"].ToString() : null;
+            double tolerance = args.ContainsKey("tolerance") ? Convert.ToDouble(args["tolerance"]) : 10.0; // Default 10mm
+            int connectedCount = 0;
+
+            using (Transaction tr = doc.TransactionManager.StartTransaction())
+            {
+                BlockTable bt = (BlockTable)tr.GetObject(doc.Database.BlockTableId, OpenMode.ForRead);
+                BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
+
+                List<Line> lines = GetAllLines(tr, btr, layerFilter);
+                
+                // Simple greedy snapping O(N^2)
+                for (int i = 0; i < lines.Count; i++)
+                {
+                    Line l1 = lines[i];
+                    bool modified = false;
+
+                    for (int j = 0; j < lines.Count; j++)
+                    {
+                        if (i == j) continue;
+                        Line l2 = lines[j];
+
+                        // Check 4 pairs of endpoints
+                        Point3d[] p1s = { l1.StartPoint, l1.EndPoint };
+                        Point3d[] p2s = { l2.StartPoint, l2.EndPoint };
+
+                        for (int a = 0; a < 2; a++)
+                        {
+                            for (int b = 0; b < 2; b++)
+                            {
+                                double dist = p1s[a].DistanceTo(p2s[b]);
+                                if (dist > 0 && dist <= tolerance)
+                                {
+                                    // Snap l1 endpoint to l2 endpoint
+                                    l1.UpgradeOpen();
+                                    if (a == 0) l1.StartPoint = p2s[b];
+                                    else l1.EndPoint = p2s[b];
+                                    
+                                    connectedCount++;
+                                    modified = true;
+                                    break; // Move to next potential connection for this line
+                                }
+                            }
+                            if (modified) break;
+                        }
+                    }
+                }
+                tr.Commit();
+            }
+
+            return $"Connected {connectedCount} endpoints within tolerance {tolerance}mm.";
         }
 
         private static string FindOverlaps(Document doc, Dictionary<string, object> args)

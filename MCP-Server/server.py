@@ -99,10 +99,20 @@ def clean_overlaps(ctx: Context, layer: Optional[str] = None) -> str:
     """
     return send_command("clean_overlaps", {"layer": layer} if layer else {})
 
+@mcp.tool()
+def connect_lines(ctx: Context, layer: Optional[str] = None, tolerance: float = 10.0) -> str:
+    """Ensure lines on the same layer are connected by snapping nearby endpoints
+    
+    Args:
+        layer: Optional layer name to filter
+        tolerance: Max distance to snap (default 10.0 mm)
+    """
+    return send_command("connect_lines", {"layer": layer, "tolerance": tolerance} if layer else {"tolerance": tolerance})
+
 if __name__ == "__main__":
     print("🏗️ AutoCAD MCP Server (建築師版) 啟動中...")
     print("📋 可用工具：create_new_drawing, draw_line, draw_circle, draw_rectangle,")
     print("           set_layer, list_layers, set_layer_color, scan_all_entities,")
     print("           find_text, highlight_by_layer, create_arch_layers, draw_wall,")
-    print("           find_overlaps, clean_overlaps")
+    print("           find_overlaps, clean_overlaps, connect_lines")
     mcp.run()
