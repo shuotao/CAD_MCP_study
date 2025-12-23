@@ -205,6 +205,24 @@ def change_color(ctx: Context, from_color: int, to_color: int) -> str:
     """
     return send_command("change_color", {"from_color": from_color, "to_color": to_color})
 
+@mcp.tool()
+def get_coordinate_info(ctx: Context) -> str:
+    """Get detailed coordinate system information for this AutoCAD drawing
+    
+    Returns a JSON report containing:
+    - WCS Origin (World Coordinate System - always 0,0,0)
+    - UCS Origin (User Coordinate System - current user-defined origin)
+    - Drawing Extents (Min/Max bounds of all geometry)
+    - Distance from WCS origin
+    - Recommendation for Revit import method
+    """
+    return send_command("get_coordinate_info")
+
+@mcp.tool()
+def get_drawing_extents(ctx: Context) -> str:
+    """Get the bounding box (Min/Max coordinates) of all geometry in the drawing"""
+    return send_command("get_drawing_extents")
+
 if __name__ == "__main__":
     print("🏗️ AutoCAD MCP Server (建築師版) 啟動中...")
     print("📋 可用工具：")

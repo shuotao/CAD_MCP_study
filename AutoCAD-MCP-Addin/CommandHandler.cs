@@ -46,6 +46,10 @@ namespace AutoCADMCP.Server
                     return SetLayerColor(doc, args);
                 case "change_color":
                     return ChangeColor(doc, args);
+                case "get_coordinate_info":
+                    return GetCoordinateInfo(doc);
+                case "get_drawing_extents":
+                    return GetDrawingExtents(doc);
                 default:
                     return $"Unknown command: {command}";
             }
@@ -672,6 +676,134 @@ namespace AutoCADMCP.Server
                 return $"Changed {layerCount} layers and {entityCount} entities from color {fromColor} to {toColor}.";
             }
             catch (Exception ex) { return $"Error changing color: {ex.Message}"; }
+        }
+
+        private static string GetCoordinateInfo(Document doc)
+        {
+            try
+            {
+                var db = doc.Database;
+                var ed = doc.Editor;
+                
+                // Get current UCS
+                var ucs = ed.CurrentUserCoordinateSystem;
+                Point3d ucsOrigin = ucs.CoordinateSystem3d.Origin;
+                string ucsName = "Unnamed";
+                
+                // Try to get UCS name
+                using (Transaction tr = doc.TransactionManager.StartTransaction())
+                {
+                    UcsTable ut = (UcsTable)tr.GetObject(db.UcsTableId, OpenMode.ForRead);
+                    foreach (ObjectId id in ut)
+                    {
+                        UcsTableRecord utr = (UcsTableRecord)tr.GetObject(id, OpenMode.ForRead);
+                        if (utr.Origin == ucsOrigin)
+                        {
+                            ucsName = utr.Name;
+                            break;
+                        }
+                    }
+                    tr.Commit();
+                }
+
+                // Get drawing extents
+                Extents3d extents = new Extents3d();
+                bool hasExtents = false;
+                
+                using (Transaction tr = doc.TransactionManager.StartTransaction())
+                {
+                    BlockTable bt = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
+                    BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForRead);
+                    
+                    foreach (ObjectId id in btr)
+                    {
+                        Entity ent = (Entity)tr.GetObject(id, OpenMode.ForRead);
+                        if (ent.Bounds.HasValue)
+                        {
+                            if (!hasExtents)
+                            {
+                                extents = ent.Bounds.Value;
+                                hasExtents = true;
+                            }
+                            else
+                            {
+                                extents.AddExtents(ent.Bounds.Value);
+                            }
+                        }
+                    }
+                    tr.Commit();
+                }
+
+                if (!hasExtents)
+                    return "No geometry found in model space.";
+
+                // Calculate center and distance from WCS origin
+                Point3d center = new Point3d(
+                    (extents.MinPoint.X + extents.MaxPoint.X) / 2,
+                    (extents.MinPoint.Y + extents.MaxPoint.Y) / 2,
+                    (extents.MinPoint.Z + extents.MaxPoint.Z) / 2
+                );
+                double distanceFromOrigin = center.DistanceTo(Point3d.Origin);
+
+                // Build report
+                var report = new
+                {
+                    WCS_Origin = "0, 0, 0 (Fixed)",
+                    UCS_Name = ucsName,
+                    UCS_Origin = $"{ucsOrigin.X:F2}, {ucsOrigin.Y:F2}, {ucsOrigin.Z:F2}",
+                    UCS_Is_World = ucsOrigin.DistanceTo(Point3d.Origin) < 0.001,
+                    Drawing_Min = $"{extents.MinPoint.X:F2}, {extents.MinPoint.Y:F2}, {extents.MinPoint.Z:F2}",
+                    Drawing_Max = $"{extents.MaxPoint.X:F2}, {extents.MaxPoint.Y:F2}, {extents.MaxPoint.Z:F2}",
+                    Drawing_Center = $"{center.X:F2}, {center.Y:F2}, {center.Z:F2}",
+                    Distance_From_WCS_Origin = $"{distanceFromOrigin:F2} units",
+                    Revit_Import_Recommendation = distanceFromOrigin < 30000 
+                        ? "Safe for 'Origin to Origin' import." 
+                        : "Warning: Drawing is far from origin. Consider moving to (0,0) or use 'Shared Coordinates' in Revit."
+                };
+
+                return JsonConvert.SerializeObject(report, Formatting.Indented);
+            }
+            catch (Exception ex) { return $"Error getting coordinate info: {ex.Message}"; }
+        }
+
+        private static string GetDrawingExtents(Document doc)
+        {
+            try
+            {
+                var db = doc.Database;
+                Extents3d extents = new Extents3d();
+                bool hasExtents = false;
+
+                using (Transaction tr = doc.TransactionManager.StartTransaction())
+                {
+                    BlockTable bt = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
+                    BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForRead);
+
+                    foreach (ObjectId id in btr)
+                    {
+                        Entity ent = (Entity)tr.GetObject(id, OpenMode.ForRead);
+                        if (ent.Bounds.HasValue)
+                        {
+                            if (!hasExtents)
+                            {
+                                extents = ent.Bounds.Value;
+                                hasExtents = true;
+                            }
+                            else
+                            {
+                                extents.AddExtents(ent.Bounds.Value);
+                            }
+                        }
+                    }
+                    tr.Commit();
+                }
+
+                if (!hasExtents)
+                    return "No geometry found.";
+
+                return $"Min: ({extents.MinPoint.X:F2}, {extents.MinPoint.Y:F2}, {extents.MinPoint.Z:F2}), Max: ({extents.MaxPoint.X:F2}, {extents.MaxPoint.Y:F2}, {extents.MaxPoint.Z:F2})";
+            }
+            catch (Exception ex) { return $"Error getting extents: {ex.Message}"; }
         }
     }
 }
