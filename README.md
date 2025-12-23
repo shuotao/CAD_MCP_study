@@ -5,6 +5,14 @@
 
 本專案參考 **Revit MCP** 架構，採用 Socket 通訊模式 (Port 8964)。AI 透過 MCP Server 發送指令，由 C# Add-in 在 AutoCAD 內部執行。
 
+## 📋 前置需求 (Pre-requisites)
+
+在進行部署之前，請確保您的環境已安裝以下組件：
+
+1. **Python 3.8+**: 用於執行 MCP Server。建議安裝最新 [Python 3.12](https://www.python.org/downloads/)。
+2. **.NET SDK 8.0+**: 用於編譯 C# Add-in 原始碼。
+3. **AutoCAD 完整版**: 支援 2021-2024 (或更早支援 .NET 4.8 的版本)。*不支援 AutoCAD LT*。
+
 ---
 
 ## 🏗️ 系統架構
