@@ -81,5 +81,28 @@ def get_layers(ctx: Context) -> str:
     """List all layers in the current drawing"""
     return send_command("get_layers")
 
+@mcp.tool()
+def find_overlaps(ctx: Context, layer: Optional[str] = None) -> str:
+    """Find overlapping lines in the drawing (or specified layer)
+    
+    Args:
+        layer: Optional layer name to filter
+    """
+    return send_command("find_overlaps", {"layer": layer} if layer else {})
+
+@mcp.tool()
+def clean_overlaps(ctx: Context, layer: Optional[str] = None) -> str:
+    """Delete shorter overlapping line segments
+    
+    Args:
+        layer: Optional layer name to filter
+    """
+    return send_command("clean_overlaps", {"layer": layer} if layer else {})
+
 if __name__ == "__main__":
+    print("🏗️ AutoCAD MCP Server (建築師版) 啟動中...")
+    print("📋 可用工具：create_new_drawing, draw_line, draw_circle, draw_rectangle,")
+    print("           set_layer, list_layers, set_layer_color, scan_all_entities,")
+    print("           find_text, highlight_by_layer, create_arch_layers, draw_wall,")
+    print("           find_overlaps, clean_overlaps")
     mcp.run()

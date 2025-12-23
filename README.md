@@ -60,7 +60,14 @@ pip install -r requirements.txt
 3. **設定 AI**：
    在 `claude_desktop_config.json` 中指向 `MCP-Server/server.py`。
 4. **開始使用**：
-   AI 現在可以透過指令 (如 `draw_wall`) 控制 AutoCAD。
+   AI 現在可以透過指令控制 AutoCAD：
+
+   | 指令 | 說明 | 參數 |
+   |---|---|---|
+   | `draw_wall` | 繪製雙線牆 | start, end, width |
+   | `get_layers` | 查詢圖層 | 無 |
+   | `find_overlaps` | 查詢重疊線段 | layer (optional) |
+   | `clean_overlaps` | 刪除重疊短線 | layer (optional) |
 
 ---
 
