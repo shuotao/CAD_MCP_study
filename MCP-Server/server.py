@@ -237,6 +237,26 @@ def draw_origin_cross(ctx: Context, size: float = 1000) -> str:
     """
     return send_command("draw_origin_cross", {"size": size})
 
+@mcp.tool()
+def analyze_coordinates(ctx: Context, marker_size: float = 1000) -> str:
+    """Unified coordinate analysis tool - queries drawing coordinates AND draws stakeout marker
+    
+    This is the main tool for coordinate analysis. It will:
+    1. Query the WCS/UCS coordinate systems
+    2. Calculate drawing extents and distance from origin
+    3. Provide Revit import recommendations
+    4. Draw a stakeout cross marker with text annotations at WCS origin (0,0,0)
+    
+    Args:
+        marker_size: Size of the origin cross marker (default 1000 units)
+    
+    Use this tool when the user asks about:
+    - Drawing coordinates or origin
+    - Preparing for Revit import
+    - Checking coordinate alignment
+    """
+    return send_command("analyze_coordinates", {"marker_size": marker_size})
+
 if __name__ == "__main__":
     print("🏗️ AutoCAD MCP Server (建築師版) 啟動中...")
     print("📋 可用工具：")

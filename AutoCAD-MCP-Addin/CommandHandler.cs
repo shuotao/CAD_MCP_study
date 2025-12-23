@@ -52,6 +52,8 @@ namespace AutoCADMCP.Server
                     return GetDrawingExtents(doc);
                 case "draw_origin_cross":
                     return DrawOriginCross(doc, args);
+                case "analyze_coordinates":
+                    return AnalyzeCoordinates(doc, args);
                 default:
                     return $"Unknown command: {command}";
             }
@@ -814,23 +816,24 @@ namespace AutoCADMCP.Server
             {
                 // Default cross size (in drawing units)
                 double size = args.ContainsKey("size") ? Convert.ToDouble(args["size"]) : 1000;
+                double textHeight = size / 10;
                 
                 using (Transaction tr = doc.TransactionManager.StartTransaction())
                 {
                     BlockTable bt = (BlockTable)tr.GetObject(doc.Database.BlockTableId, OpenMode.ForRead);
                     BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
 
-                    // Draw horizontal line through origin
+                    // Draw horizontal line through origin (X-axis)
                     Line hLine = new Line(new Point3d(-size, 0, 0), new Point3d(size, 0, 0));
                     hLine.Layer = "0";
                     hLine.Color = Color.FromColorIndex(ColorMethod.ByAci, 1); // Red
                     btr.AppendEntity(hLine);
                     tr.AddNewlyCreatedDBObject(hLine, true);
 
-                    // Draw vertical line through origin
+                    // Draw vertical line through origin (Y-axis)
                     Line vLine = new Line(new Point3d(0, -size, 0), new Point3d(0, size, 0));
                     vLine.Layer = "0";
-                    vLine.Color = Color.FromColorIndex(ColorMethod.ByAci, 3); // Green (Y-axis)
+                    vLine.Color = Color.FromColorIndex(ColorMethod.ByAci, 3); // Green
                     btr.AppendEntity(vLine);
                     tr.AddNewlyCreatedDBObject(vLine, true);
 
@@ -841,12 +844,60 @@ namespace AutoCADMCP.Server
                     btr.AppendEntity(circle);
                     tr.AddNewlyCreatedDBObject(circle, true);
 
+                    // Add text annotations
+                    // Origin label
+                    DBText originText = new DBText();
+                    originText.Position = new Point3d(size / 8, -size / 5, 0);
+                    originText.Height = textHeight;
+                    originText.TextString = "WCS ORIGIN (0,0,0)";
+                    originText.Layer = "0";
+                    originText.Color = Color.FromColorIndex(ColorMethod.ByAci, 5);
+                    btr.AppendEntity(originText);
+                    tr.AddNewlyCreatedDBObject(originText, true);
+
+                    // X-axis label
+                    DBText xText = new DBText();
+                    xText.Position = new Point3d(size + size / 10, 0, 0);
+                    xText.Height = textHeight;
+                    xText.TextString = "+X";
+                    xText.Layer = "0";
+                    xText.Color = Color.FromColorIndex(ColorMethod.ByAci, 1);
+                    btr.AppendEntity(xText);
+                    tr.AddNewlyCreatedDBObject(xText, true);
+
+                    // Y-axis label
+                    DBText yText = new DBText();
+                    yText.Position = new Point3d(size / 10, size + size / 10, 0);
+                    yText.Height = textHeight;
+                    yText.TextString = "+Y";
+                    yText.Layer = "0";
+                    yText.Color = Color.FromColorIndex(ColorMethod.ByAci, 3);
+                    btr.AppendEntity(yText);
+                    tr.AddNewlyCreatedDBObject(yText, true);
+
                     tr.Commit();
                 }
 
-                return $"Origin cross drawn at (0,0) with size {size}. Red=X-axis, Green=Y-axis, Blue circle=Origin point.";
+                return $"Origin cross with annotations drawn at (0,0). Red=+X axis, Green=+Y axis, Blue=Origin point.";
             }
             catch (Exception ex) { return $"Error drawing origin cross: {ex.Message}"; }
+        }
+
+        private static string AnalyzeCoordinates(Document doc, Dictionary<string, object> args)
+        {
+            try
+            {
+                double markerSize = args.ContainsKey("marker_size") ? Convert.ToDouble(args["marker_size"]) : 1000;
+                
+                // First get coordinate info
+                string coordInfo = GetCoordinateInfo(doc);
+                
+                // Then draw the origin marker with annotations
+                string markerResult = DrawOriginCross(doc, new Dictionary<string, object> { { "size", markerSize } });
+
+                return $"=== Coordinate Analysis Complete ===\n\n{coordInfo}\n\n=== Stakeout Marker ===\n{markerResult}";
+            }
+            catch (Exception ex) { return $"Error analyzing coordinates: {ex.Message}"; }
         }
     }
 }
