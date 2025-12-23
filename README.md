@@ -9,9 +9,15 @@
 
 在進行部署之前，請確保您的環境已安裝以下組件：
 
-1. **Python 3.8+**: 用於執行 MCP Server。建議安裝最新 [Python 3.12](https://www.python.org/downloads/)。
-2. **.NET SDK 8.0+**: 用於編譯 C# Add-in 原始碼。
-3. **AutoCAD 完整版**: 支援 2021-2024 (或更早支援 .NET 4.8 的版本)。*不支援 AutoCAD LT*。
+| 組件 | 用途 | 備註 |
+|------|------|------|
+| **.NET SDK 8.0+** | 編譯 C# Add-in | 必要 |
+| **AutoCAD 完整版** | 2021-2024 | *不支援 LT 版* |
+| **Python 3.8+** 或 **Node.js 18+** | 執行 MCP Server | 二選一 |
+
+### MCP Server 語言選擇
+- **Python (推薦)**：使用 `MCP-Server/server.py`，支援完整 MCP 協定。
+- **Node.js (替代)**：使用 `bridge.js`，適合已有 Node.js 環境的使用者。
 
 ---
 
