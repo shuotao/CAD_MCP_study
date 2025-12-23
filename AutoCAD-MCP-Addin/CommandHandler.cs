@@ -50,6 +50,8 @@ namespace AutoCADMCP.Server
                     return GetCoordinateInfo(doc);
                 case "get_drawing_extents":
                     return GetDrawingExtents(doc);
+                case "draw_origin_cross":
+                    return DrawOriginCross(doc, args);
                 default:
                     return $"Unknown command: {command}";
             }
@@ -804,6 +806,47 @@ namespace AutoCADMCP.Server
                 return $"Min: ({extents.MinPoint.X:F2}, {extents.MinPoint.Y:F2}, {extents.MinPoint.Z:F2}), Max: ({extents.MaxPoint.X:F2}, {extents.MaxPoint.Y:F2}, {extents.MaxPoint.Z:F2})";
             }
             catch (Exception ex) { return $"Error getting extents: {ex.Message}"; }
+        }
+
+        private static string DrawOriginCross(Document doc, Dictionary<string, object> args)
+        {
+            try
+            {
+                // Default cross size (in drawing units)
+                double size = args.ContainsKey("size") ? Convert.ToDouble(args["size"]) : 1000;
+                
+                using (Transaction tr = doc.TransactionManager.StartTransaction())
+                {
+                    BlockTable bt = (BlockTable)tr.GetObject(doc.Database.BlockTableId, OpenMode.ForRead);
+                    BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
+
+                    // Draw horizontal line through origin
+                    Line hLine = new Line(new Point3d(-size, 0, 0), new Point3d(size, 0, 0));
+                    hLine.Layer = "0";
+                    hLine.Color = Color.FromColorIndex(ColorMethod.ByAci, 1); // Red
+                    btr.AppendEntity(hLine);
+                    tr.AddNewlyCreatedDBObject(hLine, true);
+
+                    // Draw vertical line through origin
+                    Line vLine = new Line(new Point3d(0, -size, 0), new Point3d(0, size, 0));
+                    vLine.Layer = "0";
+                    vLine.Color = Color.FromColorIndex(ColorMethod.ByAci, 3); // Green (Y-axis)
+                    btr.AppendEntity(vLine);
+                    tr.AddNewlyCreatedDBObject(vLine, true);
+
+                    // Draw small circle at origin for visibility
+                    Circle circle = new Circle(Point3d.Origin, Vector3d.ZAxis, size / 10);
+                    circle.Layer = "0";
+                    circle.Color = Color.FromColorIndex(ColorMethod.ByAci, 5); // Blue
+                    btr.AppendEntity(circle);
+                    tr.AddNewlyCreatedDBObject(circle, true);
+
+                    tr.Commit();
+                }
+
+                return $"Origin cross drawn at (0,0) with size {size}. Red=X-axis, Green=Y-axis, Blue circle=Origin point.";
+            }
+            catch (Exception ex) { return $"Error drawing origin cross: {ex.Message}"; }
         }
     }
 }

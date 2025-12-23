@@ -223,6 +223,20 @@ def get_drawing_extents(ctx: Context) -> str:
     """Get the bounding box (Min/Max coordinates) of all geometry in the drawing"""
     return send_command("get_drawing_extents")
 
+@mcp.tool()
+def draw_origin_cross(ctx: Context, size: float = 1000) -> str:
+    """Draw a survey/stakeout cross marker at the WCS origin (0,0,0)
+    
+    Args:
+        size: Length of each arm of the cross (default 1000 units)
+    
+    The cross will be drawn on layer 0 with:
+    - Red line for X-axis
+    - Green line for Y-axis  
+    - Blue circle at the origin point
+    """
+    return send_command("draw_origin_cross", {"size": size})
+
 if __name__ == "__main__":
     print("🏗️ AutoCAD MCP Server (建築師版) 啟動中...")
     print("📋 可用工具：")
