@@ -1,0 +1,11 @@
+{
+    "mcpServers": {
+        "autocad": {
+            "command": "python",
+            "args": [
+                "MCP-Server/server.py"
+            ],
+            "cwd": "C:\\CAD_MCP_study"
+        }
+    }
+}

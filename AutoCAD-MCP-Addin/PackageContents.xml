@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ApplicationPackage SchemaVersion="1.0" 
+    AppVersion="1.0.0" 
+    Author="AutoCAD MCP Team" 
+    ProductCode="{AA3D6B57-5555-46A2-8230-ABCDE1234567}" 
+    Name="AutoCAD MCP Tools"
+    Description="AI-Powered AutoCAD Control via Socket"
+    Icon="./Contents/Resources/icon.ico">
+    
+    <CompanyDetails Name="AutoCAD MCP Team" Url="https://github.com/shuotao/CAD_MCP_study" Email="support@example.com"/>
+
+    <Components>
+        <RuntimeRequirements OS="Win64" Platform="AutoCAD*" SeriesMin="R24.0" SeriesMax="R25.0" />
+        <ComponentEntry AppName="AutoCADMCP" Version="1.0.0" ModuleName="./Contents/AutoCADMCP.dll" LoadOnCommandInvocation="True">
+            <Commands GroupName="MCP">
+                <Command Local="STARTMCP" Global="STARTMCP" />
+            </Commands>
+        </ComponentEntry>
+    </Components>
+</ApplicationPackage>

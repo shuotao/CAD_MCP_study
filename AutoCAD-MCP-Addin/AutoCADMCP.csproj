@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <AssemblyName>AutoCADMCP</AssemblyName>
+    <RootNamespace>AutoCADMCP</RootNamespace>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 
+      AutoCAD NuGet packages
+      Note: You might need to adjust versions based on target AutoCAD version.
+      2024 uses .NET 4.8. 2025 uses .NET 8.
+      We stick to .NET 4.8 for broad compatibility (2018-2024).
+    -->
+    <PackageReference Include="AutoCAD.NET" Version="24.0.0.11182" />
+    <PackageReference Include="AutoCAD.NET.Model" Version="24.0.0.11182" />
+    <PackageReference Include="AutoCAD.NET.Core" Version="24.0.0.11182" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="System.Xaml" />
+  </ItemGroup>
+
+</Project>

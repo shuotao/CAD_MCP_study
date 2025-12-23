@@ -1,0 +1,11 @@
+{
+    "servers": {
+        "autocad": {
+            "command": "python",
+            "args": [
+                "MCP-Server/server.py"
+            ],
+            "cwd": "${workspaceFolder}"
+        }
+    }
+}
