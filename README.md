@@ -15,6 +15,12 @@
 | **.NET SDK 8.0+** | 編譯 C# Add-in | 必要 |
 | **AutoCAD 完整版** | 2021-2024 | *不支援 LT 版* |
 
+> ⚠️ **首次 Clone 使用者注意**：Clone 完成後，請先執行以下指令安裝 Python 套件：
+> ```powershell
+> cd MCP-Server
+> pip install -r requirements.txt
+> ```
+
 ---
 
 ## 🏗️ 系統架構
