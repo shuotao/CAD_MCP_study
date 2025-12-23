@@ -1,5 +1,4 @@
 using System;
-using System.Windows.Media.Imaging;
 using Autodesk.AutoCAD.ApplicationServices;
 using Autodesk.AutoCAD.Runtime;
 using Autodesk.Windows;

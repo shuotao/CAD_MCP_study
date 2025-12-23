@@ -302,7 +302,6 @@ namespace AutoCADMCP.Server
 
             // 3. Check for interval overlap
             // Project all points onto the line direction
-            double t1_start = 0;
             double t1_end = v1.Length;
             
             Vector3d dir = v1.GetNormal();
@@ -629,31 +628,43 @@ namespace AutoCADMCP.Server
 
                 using (Transaction tr = doc.TransactionManager.StartTransaction())
                 {
-                    // 1. Change Layer Colors
+                    // 1. Change Layer Colors (Skip locked ones)
                     LayerTable lt = (LayerTable)tr.GetObject(doc.Database.LayerTableId, OpenMode.ForRead);
                     foreach (ObjectId id in lt)
                     {
-                        LayerTableRecord ltr = (LayerTableRecord)tr.GetObject(id, OpenMode.ForWrite);
+                        LayerTableRecord ltr = (LayerTableRecord)tr.GetObject(id, OpenMode.ForRead);
                         if (ltr.Color.ColorIndex == fromColor)
                         {
-                            ltr.Color = Color.FromColorIndex(ColorMethod.ByAci, toColor);
-                            layerCount++;
+                            if (!ltr.IsLocked)
+                            {
+                                ltr.UpgradeOpen();
+                                ltr.Color = Color.FromColorIndex(ColorMethod.ByAci, toColor);
+                                layerCount++;
+                            }
                         }
                     }
 
-                    // 2. Change Entity Colors (Explicit overrides)
+                    // 2. Change Entity Colors in all blocks (ModelSpace, PaperSpace, and Block Definitions)
                     BlockTable bt = (BlockTable)tr.GetObject(doc.Database.BlockTableId, OpenMode.ForRead);
-                    BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForRead);
-
-                    foreach (ObjectId id in btr)
+                    foreach (ObjectId btrId in bt)
                     {
-                        Entity ent = (Entity)tr.GetObject(id, OpenMode.ForRead);
-                        // Check if entity has color explicitly set to fromColor (not ByLayer)
-                        if (ent.Color.ColorIndex == fromColor && !ent.Color.IsByLayer)
+                        BlockTableRecord btr = (BlockTableRecord)tr.GetObject(btrId, OpenMode.ForRead);
+                        
+                        foreach (ObjectId id in btr)
                         {
-                            ent.UpgradeOpen();
-                            ent.Color = Color.FromColorIndex(ColorMethod.ByAci, toColor);
-                            entityCount++;
+                            Entity ent = (Entity)tr.GetObject(id, OpenMode.ForRead);
+                            // Check if entity has color explicitly set to fromColor (not ByLayer)
+                            if (ent.Color.ColorIndex == fromColor && !ent.Color.IsByLayer)
+                            {
+                                // Check if layer is locked before modifying
+                                LayerTableRecord layer = (LayerTableRecord)tr.GetObject(ent.LayerId, OpenMode.ForRead);
+                                if (!layer.IsLocked)
+                                {
+                                    ent.UpgradeOpen();
+                                    ent.Color = Color.FromColorIndex(ColorMethod.ByAci, toColor);
+                                    entityCount++;
+                                }
+                            }
                         }
                     }
                     tr.Commit();
