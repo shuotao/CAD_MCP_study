@@ -35,8 +35,18 @@ def send_command(command: str, args: Dict[str, Any] = None) -> str:
             msg = json.dumps(request)
             s.sendall(msg.encode('utf-8'))
             
-            # Receive response
-            data = s.recv(8192)
+            # Receive response (handle potentially large data)
+            chunks = []
+            while True:
+                chunk = s.recv(8192)
+                if not chunk:
+                    break
+                chunks.append(chunk)
+            
+            if not chunks:
+                return "Error: No data received from AutoCAD."
+
+            data = b"".join(chunks)
             response = json.loads(data.decode('utf-8'))
             
             if response.get("Success"):
@@ -44,6 +54,8 @@ def send_command(command: str, args: Dict[str, Any] = None) -> str:
             else:
                 return f"AutoCAD Error: {response.get('Message', 'Unknown error')}"
                 
+    except json.JSONDecodeError:
+        return "Error: Received invalid JSON from AutoCAD. The response might be too large or corrupted."
     except Exception as e:
         return f"Connection Failed: {str(e)}"
 

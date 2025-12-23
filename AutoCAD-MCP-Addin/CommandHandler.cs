@@ -5,6 +5,7 @@ using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Geometry;
 using Autodesk.AutoCAD.Colors;
 using Autodesk.AutoCAD.EditorInput;
+using Newtonsoft.Json;
 using Application = Autodesk.AutoCAD.ApplicationServices.Core.Application;
 
 namespace AutoCADMCP.Server
@@ -167,6 +168,12 @@ namespace AutoCADMCP.Server
                 BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForRead);
 
                 List<Line> lines = GetAllLines(tr, btr, layerFilter);
+                
+                // PERFORMANCE GUARD: Limit N^2 calculation
+                if (lines.Count > 5000)
+                {
+                    return $"Error: Too many lines detected ({lines.Count}). For performance reasons, overlap detection is limited to 5000 lines. Please filter by layer.";
+                }
 
                 for (int i = 0; i < lines.Count; i++)
                 {
@@ -197,6 +204,12 @@ namespace AutoCADMCP.Server
                 BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
 
                 List<Line> lines = GetAllLines(tr, btr, layerFilter);
+                
+                if (lines.Count > 5000)
+                {
+                    return "Error: Too many lines to process cleanup safely. Please filter by layer.";
+                }
+
                 HashSet<ObjectId> toDelete = new HashSet<ObjectId>();
 
                 for (int i = 0; i < lines.Count; i++)
@@ -350,7 +363,16 @@ namespace AutoCADMCP.Server
 
                 // Ensure layer exists
                 string layer = "A-WALL";
-                CreateLayer(doc, new Dictionary<string, object> { { "name", layer }, { "color", 1 } }); // Red
+                LayerTable lt = (LayerTable)tr.GetObject(doc.Database.LayerTableId, OpenMode.ForRead);
+                if (!lt.Has(layer))
+                {
+                    LayerTableRecord ltr = new LayerTableRecord();
+                    ltr.Name = layer;
+                    ltr.Color = Color.FromColorIndex(ColorMethod.ByAci, 1); // Red
+                    lt.UpgradeOpen();
+                    lt.Add(ltr);
+                    tr.AddNewlyCreatedDBObject(ltr, true);
+                }
 
                 Line l1 = new Line(new Point3d(x1, y1, 0) + perp, new Point3d(x2, y2, 0) + perp);
                 Line l2 = new Line(new Point3d(x1, y1, 0) - perp, new Point3d(x2, y2, 0) - perp);

@@ -85,6 +85,8 @@ namespace AutoCADMCP.Server
                         if (bytesRead == 0) break;
 
                         string jsonString = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                        
+                        // Handle potential multiple JSON objects in one buffer
                         var request = JsonConvert.DeserializeObject<McpRequest>(jsonString);
 
                         if (request != null)
@@ -94,9 +96,8 @@ namespace AutoCADMCP.Server
                             await stream.WriteAsync(responseBytes, 0, responseBytes.Length, token);
                         }
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
-                        // Log error
                         break;
                     }
                 }
@@ -105,25 +106,30 @@ namespace AutoCADMCP.Server
 
         private static async Task<McpResponse> ProcessRequest(McpRequest request)
         {
-            // Must execute on AutoCAD main thread
             var tcs = new TaskCompletionSource<McpResponse>();
 
-            Application.DocumentManager.MdiActiveDocument.Editor.WriteMessage($"\n[MCP] Received command: {request.Command}");
-
-            // Lock document to ensure thread safety
-            var doc = Application.DocumentManager.MdiActiveDocument;
-            
-            // Execute in application context
+            // Must execute on AutoCAD main thread
             await Autodesk.AutoCAD.ApplicationServices.Core.Application.Dispatcher.InvokeAsync(() =>
             {
-                try
+                var doc = Application.DocumentManager.MdiActiveDocument;
+                if (doc == null)
                 {
-                    string result = CommandHandler.Execute(doc, request.Command, request.Args);
-                    tcs.SetResult(new McpResponse { Success = true, Message = result });
+                    tcs.SetResult(new McpResponse { Success = false, Message = "No active document found in AutoCAD." });
+                    return;
                 }
-                catch (Exception ex)
+
+                // IMPORTANT: Must lock document when operating from non-command context
+                using (doc.LockDocument())
                 {
-                    tcs.SetResult(new McpResponse { Success = false, Message = ex.Message });
+                    try
+                    {
+                        string result = CommandHandler.Execute(doc, request.Command, request.Args);
+                        tcs.SetResult(new McpResponse { Success = true, Message = result });
+                    }
+                    catch (Exception ex)
+                    {
+                        tcs.SetResult(new McpResponse { Success = false, Message = ex.Message });
+                    }
                 }
             });
 
