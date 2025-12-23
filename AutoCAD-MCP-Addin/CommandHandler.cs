@@ -44,6 +44,8 @@ namespace AutoCADMCP.Server
                     return DrawCircle(doc, args);
                 case "set_layer_color":
                     return SetLayerColor(doc, args);
+                case "change_color":
+                    return ChangeColor(doc, args);
                 default:
                     return $"Unknown command: {command}";
             }
@@ -611,6 +613,54 @@ namespace AutoCADMCP.Server
                 }
             }
             return false;
+        }
+
+        private static string ChangeColor(Document doc, Dictionary<string, object> args)
+        {
+            try
+            {
+                if (!args.ContainsKey("from_color") || !args.ContainsKey("to_color"))
+                    return "Error: Missing color parameters.";
+
+                short fromColor = Convert.ToInt16(args["from_color"]);
+                short toColor = Convert.ToInt16(args["to_color"]);
+                int entityCount = 0;
+                int layerCount = 0;
+
+                using (Transaction tr = doc.TransactionManager.StartTransaction())
+                {
+                    // 1. Change Layer Colors
+                    LayerTable lt = (LayerTable)tr.GetObject(doc.Database.LayerTableId, OpenMode.ForRead);
+                    foreach (ObjectId id in lt)
+                    {
+                        LayerTableRecord ltr = (LayerTableRecord)tr.GetObject(id, OpenMode.ForWrite);
+                        if (ltr.Color.ColorIndex == fromColor)
+                        {
+                            ltr.Color = Color.FromColorIndex(ColorMethod.ByAci, toColor);
+                            layerCount++;
+                        }
+                    }
+
+                    // 2. Change Entity Colors (Explicit overrides)
+                    BlockTable bt = (BlockTable)tr.GetObject(doc.Database.BlockTableId, OpenMode.ForRead);
+                    BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForRead);
+
+                    foreach (ObjectId id in btr)
+                    {
+                        Entity ent = (Entity)tr.GetObject(id, OpenMode.ForRead);
+                        // Check if entity has color explicitly set to fromColor (not ByLayer)
+                        if (ent.Color.ColorIndex == fromColor && !ent.Color.IsByLayer)
+                        {
+                            ent.UpgradeOpen();
+                            ent.Color = Color.FromColorIndex(ColorMethod.ByAci, toColor);
+                            entityCount++;
+                        }
+                    }
+                    tr.Commit();
+                }
+                return $"Changed {layerCount} layers and {entityCount} entities from color {fromColor} to {toColor}.";
+            }
+            catch (Exception ex) { return $"Error changing color: {ex.Message}"; }
         }
     }
 }

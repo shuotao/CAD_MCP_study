@@ -195,6 +195,16 @@ def set_layer_color(ctx: Context, layer: str, color: int) -> str:
     
     return send_command("set_layer_color", {"layer": layer, "color": color})
 
+@mcp.tool()
+def change_color(ctx: Context, from_color: int, to_color: int) -> str:
+    """Change all elements and layers of a specific color to a new color
+    
+    Args:
+        from_color: AutoCAD Color Index (ACI) to find (1=Red, 2=Yellow, 3=Green, 4=Cyan, 5=Blue, 6=Magenta, 7=White/Black)
+        to_color: New AutoCAD Color Index (ACI) to apply
+    """
+    return send_command("change_color", {"from_color": from_color, "to_color": to_color})
+
 if __name__ == "__main__":
     print("🏗️ AutoCAD MCP Server (建築師版) 啟動中...")
     print("📋 可用工具：")
