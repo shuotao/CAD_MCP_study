@@ -8,8 +8,11 @@ namespace AutoCADMCP
 {
     public class App : IExtensionApplication
     {
+        public static System.Threading.SynchronizationContext MainThreadContext { get; private set; }
+
         public void Initialize()
         {
+            MainThreadContext = System.Threading.SynchronizationContext.Current;
             Application.Idle += Application_Idle;
         }
 
@@ -48,9 +51,13 @@ namespace AutoCADMCP
                 ribbon.Tabs.Add(tab);
             }
 
-            RibbonPanel panel = new RibbonPanel
+            RibbonPanelSource panelSource = new RibbonPanelSource
             {
                 Title = "Connection"
+            };
+            RibbonPanel panel = new RibbonPanel
+            {
+                Source = panelSource
             };
             tab.Panels.Add(panel);
 

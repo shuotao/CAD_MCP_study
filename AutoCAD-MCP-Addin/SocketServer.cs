@@ -114,7 +114,13 @@ namespace AutoCADMCP.Server
             var tcs = new TaskCompletionSource<McpResponse>();
 
             // Must execute on AutoCAD main thread
-            await Autodesk.AutoCAD.ApplicationServices.Core.Application.Dispatcher.InvokeAsync(() =>
+            if (App.MainThreadContext == null)
+            {
+                tcs.SetResult(new McpResponse { Success = false, Message = "AutoCAD Main Thread Context not initialized." });
+                return await tcs.Task;
+            }
+
+            App.MainThreadContext.Post(_ =>
             {
                 var doc = Application.DocumentManager.MdiActiveDocument;
                 if (doc == null)
@@ -124,19 +130,19 @@ namespace AutoCADMCP.Server
                 }
 
                 // IMPORTANT: Must lock document when operating from non-command context
-                using (doc.LockDocument())
+                try
                 {
-                    try
+                    using (doc.LockDocument())
                     {
                         string result = CommandHandler.Execute(doc, request.Command, request.Args);
                         tcs.SetResult(new McpResponse { Success = true, Message = result });
                     }
-                    catch (Exception ex)
-                    {
-                        tcs.SetResult(new McpResponse { Success = false, Message = ex.Message });
-                    }
                 }
-            });
+                catch (Exception ex)
+                {
+                    tcs.SetResult(new McpResponse { Success = false, Message = ex.Message });
+                }
+            }, null);
 
             return await tcs.Task;
         }

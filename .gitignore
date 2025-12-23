@@ -8,3 +8,19 @@ __pycache__/
 node_modules/
 dist/
 build/
+
+# C# / .NET
+[Bb]in/
+[Oo]bj/
+*.user
+*.userprep
+*.userprefs
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# AutoCAD MCP Specific
+Output/
+AutoCAD-MCP-Addin/bin/
+AutoCAD-MCP-Addin/obj/
