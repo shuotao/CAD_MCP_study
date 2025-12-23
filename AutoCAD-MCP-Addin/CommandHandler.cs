@@ -14,6 +14,8 @@ namespace AutoCADMCP.Server
     {
         public static string Execute(Document doc, string command, Dictionary<string, object> args)
         {
+            if (args == null) args = new Dictionary<string, object>();
+            
             switch (command)
             {
                 case "create_layer":

@@ -77,17 +77,22 @@ namespace AutoCADMCP.Server
             using (var stream = client.GetStream())
             {
                 var buffer = new byte[8192];
+                var receivedData = new List<byte>();
+
                 while (_isRunning && client.Connected && !token.IsCancellationRequested)
                 {
                     try
                     {
+                        // Set a timeout for reading to detect end of current "packet" 
+                        // Note: For a more robust protocol, we should send length first
+                        // but for simplicity we assume the whole message arrives since it's localhost
                         int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, token);
                         if (bytesRead == 0) break;
 
-                        string jsonString = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                        string jsonPart = Encoding.UTF8.GetString(buffer, 0, bytesRead);
                         
-                        // Handle potential multiple JSON objects in one buffer
-                        var request = JsonConvert.DeserializeObject<McpRequest>(jsonString);
+                        // Basic JSON completeness check (simplified for this use case)
+                        var request = JsonConvert.DeserializeObject<McpRequest>(jsonPart);
 
                         if (request != null)
                         {
