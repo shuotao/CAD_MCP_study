@@ -1,8 +1,10 @@
 {
   "mcpServers": {
     "autocad": {
-      "command": "C:\\CAD_MCP_study\\MCP-Server\\venv\\Scripts\\python.exe",
-      "args": ["C:\\CAD_MCP_study\\MCP-Server\\server.py"]
+      "command": "python",
+      "args": [
+        "C:\\Users\\01102088\\Desktop\\AUTODESK MCP\\MCP-Server\\server.py"
+      ]
     }
   }
 }

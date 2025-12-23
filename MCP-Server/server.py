@@ -132,13 +132,64 @@ def update_block_description(ctx: Context, name: str, description: str) -> str:
         name: Block name
         description: New description text
     """
+    # Input validation
+    if not name or len(name) > 255:
+        return "Error: Invalid block name"
+    if len(description) > 2000:
+        return "Error: Description too long (max 2000 characters)"
     return send_command("update_block_description", {"name": name, "description": description})
+
+@mcp.tool()
+def create_new_drawing(ctx: Context) -> str:
+    """Create a new empty drawing in AutoCAD"""
+    return send_command("create_new_drawing")
+
+@mcp.tool()
+def draw_circle(ctx: Context, center_x: float, center_y: float, radius: float, layer: str = "0") -> str:
+    """Draw a circle with specified center point and radius
+    
+    Args:
+        center_x: X coordinate of circle center
+        center_y: Y coordinate of circle center
+        radius: Circle radius (must be > 0)
+        layer: Optional layer name (default: "0")
+    """
+    # Input validation
+    if radius <= 0:
+        return "Error: Radius must be greater than 0"
+    if abs(center_x) > 1e10 or abs(center_y) > 1e10 or radius > 1e10:
+        return "Error: Values out of acceptable range"
+    
+    return send_command("draw_circle", {
+        "center_x": center_x,
+        "center_y": center_y,
+        "radius": radius,
+        "layer": layer
+    })
+
+@mcp.tool()
+def set_layer_color(ctx: Context, layer: str, color: int) -> str:
+    """Set the color of an existing layer
+    
+    Args:
+        layer: Layer name to modify
+        color: AutoCAD Color Index (ACI) 0-256
+    """
+    # Input validation
+    if not layer or len(layer) > 255:
+        return "Error: Invalid layer name"
+    if color < 0 or color > 256:
+        return "Error: Color index must be between 0 and 256"
+    
+    return send_command("set_layer_color", {"layer": layer, "color": color})
 
 if __name__ == "__main__":
     print("🏗️ AutoCAD MCP Server (建築師版) 啟動中...")
-    print("📋 可用工具：create_new_drawing, draw_line, draw_circle, draw_rectangle,")
-    print("           set_layer, list_layers, set_layer_color, scan_all_entities,")
-    print("           find_text, highlight_by_layer, create_arch_layers, draw_wall,")
-    print("           find_overlaps, clean_overlaps, connect_lines")
-    print("           get_blocks_in_view, rename_block, update_block_description")
+    print("📋 可用工具：")
+    print("   繪圖工具：draw_line, draw_circle, draw_wall")
+    print("   圖層管理：create_layer, get_layers, set_layer_color")
+    print("   圖塊工具：get_blocks_in_view, rename_block, update_block_description")
+    print("   圖面整理：find_overlaps, clean_overlaps, connect_lines")
+    print("   其他工具：create_new_drawing")
     mcp.run()
+

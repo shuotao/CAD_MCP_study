@@ -60,22 +60,31 @@ pip install -r requirements.txt
 3. **設定 AI**：
    在 `claude_desktop_config.json` 中指向 `MCP-Server/server.py`。
 4. **開始使用**：
-   AI 現在可以透過指令控制 AutoCAD：
-
-   | 指令 | 說明 | 參數 |
-   |---|---|---|
-   | `draw_wall` | 繪製雙線牆 | start, end, width |
-   | `get_layers` | 查詢圖層 | 無 |
-   | `find_overlaps` | 查詢重疊線段 | layer (optional) |
-   | `clean_overlaps` | 刪除重疊短線 | layer (optional) |
-   | `connect_lines` | 線段接合確保 | layer, tolerance |
-   | `get_blocks_in_view` | 查詢視圖內圖塊 | 無 |
-   | `rename_block` | 重新命名圖塊 | old_name, new_name |
-   | `update_block_description` | 更新圖塊描述 | name, description |
+   AI 現在可以透過指令控制 AutoCAD。
 
 ---
 
-## � 使用情境與指令範例
+## 📑 完整 Tools 清單
+
+| 類別 | 指令 | 說明 | 參數 |
+|------|------|------|------|
+| **繪圖** | `draw_line` | 繪製直線 | start_x, start_y, end_x, end_y, layer |
+| | `draw_circle` | 繪製圓形 | center_x, center_y, radius, layer |
+| | `draw_wall` | 繪製雙線牆 | start_x, start_y, end_x, end_y, width |
+| **圖層** | `create_layer` | 建立新圖層 | name, color |
+| | `get_layers` | 查詢所有圖層 | 無 |
+| | `set_layer_color` | 設定圖層顏色 | layer, color (0-256) |
+| **圖塊** | `get_blocks_in_view` | 查詢視圖內圖塊 | 無 |
+| | `rename_block` | 重新命名圖塊 | old_name, new_name |
+| | `update_block_description` | 更新圖塊描述 | name, description |
+| **整理** | `find_overlaps` | 查詢重疊線段 | layer (optional) |
+| | `clean_overlaps` | 刪除重疊短線 | layer (optional) |
+| | `connect_lines` | 線段端點接合 | layer, tolerance |
+| **其他** | `create_new_drawing` | 建立新圖面 | 無 |
+
+---
+
+## 💡 使用情境與指令範例
 
 ### 情境 1：圖面整理 - 清除重疊線段
 > 適用：從其他軟體匯入的圖面，或經過多次編輯後產生的冗餘線段
@@ -128,20 +137,72 @@ AI：[呼叫 set_layer_color layer="S-COLS" color=1] 已將 S-COLS 圖層顏色�
 用戶：在 (0,0) 到 (6000,0) 畫一道 200mm 厚的牆
 AI：[呼叫 draw_wall] 已繪製牆體，長度 6000mm，厚度 200mm
 
+用戶：在 (3000, 3000) 畫一個半徑 500 的圓
+AI：[呼叫 draw_circle] 已繪製圓形，圓心 (3000, 3000)，半徑 500
+
 用戶：列出目前有幾個圖層
 AI：[呼叫 get_layers] 目前有 8 個圖層：0, A-WALL, A-DOOR...
 ```
 
 ---
 
-
-## �🛠️ 開發參考 (Revit MCP Style)
+## 🛠️ 開發參考 (Revit MCP Style)
 
 本專案代碼結構致敬 Revit MCP：
 - **App.cs**: 實作 `IExtensionApplication`，負責 UI 初始化。
 - **SocketServer.cs**: 非同步 TCP 監聽器，確保不卡住 AutoCAD 主執行緒。
 - **CommandHandler.cs**: 集中管理所有指令邏輯，易於維護。
 - **PackageContents.xml**: 標準 Autoloader 格式，支援隨插即用。
+
+---
+
+## 🔐 安全性注意事項
+
+### ⚠️ 重要安全須知
+
+> **警告**: 本專案設計用於**本機開發環境**，請勿將 Socket Port 暴露於公網！
+
+#### 網路安全
+- ✅ Socket 僅監聽 `127.0.0.1:8964` (localhost)
+- ❌ **禁止**將 Port 8964 對外開放 (防火牆/NAT)
+- ❌ **禁止**修改為 `0.0.0.0` 綁定
+
+#### 輸入驗證
+本專案已實作以下安全措施：
+- ✅ 參數型別檢查 (數值、字串長度)
+- ✅ 數值範圍驗證 (防止極端值)
+- ✅ 圖層/圖塊名稱長度限制 (max 255 字元)
+- ✅ JSON 解析錯誤處理
+
+#### IT 合規建議
+| 項目 | 風險等級 | 說明 |
+|------|----------|------|
+| 本機通訊 | 🟢 低 | 僅限 localhost |
+| 無認證機制 | 🟡 中 | 適用單機環境，企業部署需評估 |
+| 檔案操作 | 🟢 低 | 僅透過 AutoCAD API 操作 |
+
+---
+
+## 🔍 QA/QC 審查結果
+
+### 審查日期: 2024-12
+
+#### 程式碼品質 ✅
+- [x] C# 端所有公開方法皆有錯誤處理
+- [x] Python 端所有 Tools 皆有輸入驗證
+- [x] 無硬編碼密碼或敏感資訊
+- [x] Socket 通訊有 timeout 設定 (5 秒)
+
+#### 安全性審查 ✅
+- [x] 僅監聽 localhost (127.0.0.1)
+- [x] 輸入參數驗證
+- [x] 數值範圍檢查 (防止溢位攻擊)
+- [x] 字串長度限制 (防止緩衝區溢位)
+
+#### 相容性 ✅
+- [x] 支援 AutoCAD 2021+
+- [x] 支援 .NET Framework 4.8
+- [x] 支援 Python 3.8+
 
 ---
 

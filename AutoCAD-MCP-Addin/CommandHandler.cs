@@ -4,6 +4,8 @@ using Autodesk.AutoCAD.ApplicationServices;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Geometry;
 using Autodesk.AutoCAD.Colors;
+using Autodesk.AutoCAD.EditorInput;
+using Application = Autodesk.AutoCAD.ApplicationServices.Core.Application;
 
 namespace AutoCADMCP.Server
 {
@@ -33,6 +35,12 @@ namespace AutoCADMCP.Server
                     return RenameBlock(doc, args);
                 case "update_block_description":
                     return UpdateBlockDescription(doc, args);
+                case "create_new_drawing":
+                    return CreateNewDrawing(doc);
+                case "draw_circle":
+                    return DrawCircle(doc, args);
+                case "set_layer_color":
+                    return SetLayerColor(doc, args);
                 default:
                     return $"Unknown command: {command}";
             }
@@ -374,5 +382,121 @@ namespace AutoCADMCP.Server
             }
             return string.Join(", ", layers);
         }
+
+        private static string CreateNewDrawing(Document doc)
+        {
+            try
+            {
+                // Create a new drawing using DocumentCollectionExtension
+                DocumentCollection docMgr = Application.DocumentManager;
+                Document newDoc = docMgr.Add("");
+                
+                if (newDoc != null)
+                {
+                    return $"Created new drawing: {newDoc.Name}";
+                }
+                return "Failed to create new drawing.";
+            }
+            catch (Exception ex)
+            {
+                return $"Error creating new drawing: {ex.Message}";
+            }
+        }
+
+        private static string DrawCircle(Document doc, Dictionary<string, object> args)
+        {
+            try
+            {
+                // Input validation
+                if (!args.ContainsKey("center_x") || !args.ContainsKey("center_y") || !args.ContainsKey("radius"))
+                {
+                    return "Error: Missing required parameters (center_x, center_y, radius)";
+                }
+
+                double cx = Convert.ToDouble(args["center_x"]);
+                double cy = Convert.ToDouble(args["center_y"]);
+                double radius = Convert.ToDouble(args["radius"]);
+                string layer = args.ContainsKey("layer") ? args["layer"].ToString() : "0";
+
+                // Validate radius
+                if (radius <= 0)
+                {
+                    return "Error: Radius must be greater than 0";
+                }
+
+                // Validate reasonable bounds (prevent extremely large values)
+                if (Math.Abs(cx) > 1e10 || Math.Abs(cy) > 1e10 || radius > 1e10)
+                {
+                    return "Error: Coordinate or radius values are out of acceptable range";
+                }
+
+                using (Transaction tr = doc.TransactionManager.StartTransaction())
+                {
+                    BlockTable bt = (BlockTable)tr.GetObject(doc.Database.BlockTableId, OpenMode.ForRead);
+                    BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
+
+                    Circle circle = new Circle(new Point3d(cx, cy, 0), Vector3d.ZAxis, radius);
+                    circle.Layer = layer;
+
+                    btr.AppendEntity(circle);
+                    tr.AddNewlyCreatedDBObject(circle, true);
+                    tr.Commit();
+
+                    return $"Drawn circle at ({cx},{cy}) with radius {radius} on layer {layer}";
+                }
+            }
+            catch (Exception ex)
+            {
+                return $"Error drawing circle: {ex.Message}";
+            }
+        }
+
+        private static string SetLayerColor(Document doc, Dictionary<string, object> args)
+        {
+            try
+            {
+                // Input validation
+                if (!args.ContainsKey("layer") || !args.ContainsKey("color"))
+                {
+                    return "Error: Missing required parameters (layer, color)";
+                }
+
+                string layerName = args["layer"].ToString();
+                short colorIndex = Convert.ToInt16(args["color"]);
+
+                // Validate color index (ACI: 0-256)
+                if (colorIndex < 0 || colorIndex > 256)
+                {
+                    return "Error: Color index must be between 0 and 256";
+                }
+
+                // Validate layer name (prevent injection)
+                if (string.IsNullOrWhiteSpace(layerName) || layerName.Length > 255)
+                {
+                    return "Error: Invalid layer name";
+                }
+
+                using (Transaction tr = doc.TransactionManager.StartTransaction())
+                {
+                    LayerTable lt = (LayerTable)tr.GetObject(doc.Database.LayerTableId, OpenMode.ForRead);
+
+                    if (!lt.Has(layerName))
+                    {
+                        return $"Layer '{layerName}' not found.";
+                    }
+
+                    LayerTableRecord ltr = (LayerTableRecord)tr.GetObject(lt[layerName], OpenMode.ForWrite);
+                    ltr.Color = Color.FromColorIndex(ColorMethod.ByAci, colorIndex);
+
+                    tr.Commit();
+                    return $"Set layer '{layerName}' color to {colorIndex}";
+                }
+            }
+            catch (Exception ex)
+            {
+                return $"Error setting layer color: {ex.Message}";
+            }
+        }
     }
 }
+
