@@ -109,10 +109,36 @@ def connect_lines(ctx: Context, layer: Optional[str] = None, tolerance: float = 
     """
     return send_command("connect_lines", {"layer": layer, "tolerance": tolerance} if layer else {"tolerance": tolerance})
 
+@mcp.tool()
+def get_blocks_in_view(ctx: Context) -> str:
+    """Get a list of all blocks visible in the current view with their counts and descriptions"""
+    return send_command("get_blocks_in_view")
+
+@mcp.tool()
+def rename_block(ctx: Context, old_name: str, new_name: str) -> str:
+    """Rename a block definition
+    
+    Args:
+        old_name: Current block name
+        new_name: New block name
+    """
+    return send_command("rename_block", {"old_name": old_name, "new_name": new_name})
+
+@mcp.tool()
+def update_block_description(ctx: Context, name: str, description: str) -> str:
+    """Update the description (comments) of a block definition
+    
+    Args:
+        name: Block name
+        description: New description text
+    """
+    return send_command("update_block_description", {"name": name, "description": description})
+
 if __name__ == "__main__":
     print("🏗️ AutoCAD MCP Server (建築師版) 啟動中...")
     print("📋 可用工具：create_new_drawing, draw_line, draw_circle, draw_rectangle,")
     print("           set_layer, list_layers, set_layer_color, scan_all_entities,")
     print("           find_text, highlight_by_layer, create_arch_layers, draw_wall,")
     print("           find_overlaps, clean_overlaps, connect_lines")
+    print("           get_blocks_in_view, rename_block, update_block_description")
     mcp.run()

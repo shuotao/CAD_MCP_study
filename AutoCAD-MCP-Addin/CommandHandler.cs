@@ -27,64 +27,124 @@ namespace AutoCADMCP.Server
                     return CleanOverlaps(doc, args);
                 case "connect_lines":
                     return ConnectLines(doc, args);
+                case "get_blocks_in_view":
+                    return GetBlocksInView(doc);
+                case "rename_block":
+                    return RenameBlock(doc, args);
+                case "update_block_description":
+                    return UpdateBlockDescription(doc, args);
                 default:
                     return $"Unknown command: {command}";
             }
         }
 
-        private static string ConnectLines(Document doc, Dictionary<string, object> args)
+        private static string GetBlocksInView(Document doc)
         {
-            string layerFilter = args.ContainsKey("layer") ? args["layer"].ToString() : null;
-            double tolerance = args.ContainsKey("tolerance") ? Convert.ToDouble(args["tolerance"]) : 10.0; // Default 10mm
-            int connectedCount = 0;
+            var editor = doc.Editor;
+            var view = editor.GetCurrentView();
+            
+            // Calculate View Extents
+            double height = view.Height;
+            double width = view.Width;
+            Point3d center = new Point3d(view.CenterPoint.X, view.CenterPoint.Y, 0);
+            
+            Point3d min = new Point3d(center.X - width/2, center.Y - height/2, 0);
+            Point3d max = new Point3d(center.X + width/2, center.Y + height/2, 0);
+
+            // Select Crossing Window
+            PromptSelectionResult res = editor.SelectCrossingWindow(min, max);
+            
+            if (res.Status != PromptStatus.OK)
+                return "No objects found in current view.";
+
+            Dictionary<string, int> blockCounts = new Dictionary<string, int>();
+            Dictionary<string, string> blockDescs = new Dictionary<string, string>();
 
             using (Transaction tr = doc.TransactionManager.StartTransaction())
             {
                 BlockTable bt = (BlockTable)tr.GetObject(doc.Database.BlockTableId, OpenMode.ForRead);
-                BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
 
-                List<Line> lines = GetAllLines(tr, btr, layerFilter);
-                
-                // Simple greedy snapping O(N^2)
-                for (int i = 0; i < lines.Count; i++)
+                foreach (ObjectId id in res.Value.GetObjectIds())
                 {
-                    Line l1 = lines[i];
-                    bool modified = false;
-
-                    for (int j = 0; j < lines.Count; j++)
+                    if (id.ObjectClass.DxfName == "INSERT")
                     {
-                        if (i == j) continue;
-                        Line l2 = lines[j];
-
-                        // Check 4 pairs of endpoints
-                        Point3d[] p1s = { l1.StartPoint, l1.EndPoint };
-                        Point3d[] p2s = { l2.StartPoint, l2.EndPoint };
-
-                        for (int a = 0; a < 2; a++)
+                        BlockReference blkRef = (BlockReference)tr.GetObject(id, OpenMode.ForRead);
+                        // Get effective name for dynamic blocks
+                        string name = blkRef.Name;
+                        if (blkRef.IsDynamicBlock)
                         {
-                            for (int b = 0; b < 2; b++)
-                            {
-                                double dist = p1s[a].DistanceTo(p2s[b]);
-                                if (dist > 0 && dist <= tolerance)
-                                {
-                                    // Snap l1 endpoint to l2 endpoint
-                                    l1.UpgradeOpen();
-                                    if (a == 0) l1.StartPoint = p2s[b];
-                                    else l1.EndPoint = p2s[b];
-                                    
-                                    connectedCount++;
-                                    modified = true;
-                                    break; // Move to next potential connection for this line
-                                }
-                            }
-                            if (modified) break;
+                            BlockTableRecord btr = (BlockTableRecord)tr.GetObject(blkRef.DynamicBlockTableRecord, OpenMode.ForRead);
+                            name = btr.Name;
                         }
+
+                        if (!blockCounts.ContainsKey(name))
+                        {
+                            blockCounts[name] = 0;
+                            // Get description
+                            if (bt.Has(name))
+                            {
+                                BlockTableRecord def = (BlockTableRecord)tr.GetObject(bt[name], OpenMode.ForRead);
+                                blockDescs[name] = def.Comments ?? "";
+                            }
+                        }
+                        blockCounts[name]++;
                     }
                 }
                 tr.Commit();
             }
 
-            return $"Connected {connectedCount} endpoints within tolerance {tolerance}mm.";
+            if (blockCounts.Count == 0) return "No blocks found in current view.";
+
+            List<object> result = new List<object>();
+            foreach (var kvp in blockCounts)
+            {
+                result.Add(new { 
+                    Name = kvp.Key, 
+                    Count = kvp.Value, 
+                    Description = blockDescs.ContainsKey(kvp.Key) ? blockDescs[kvp.Key] : "" 
+                });
+            }
+
+            return JsonConvert.SerializeObject(result, Formatting.Indented);
+        }
+
+        private static string RenameBlock(Document doc, Dictionary<string, object> args)
+        {
+            string oldName = args["old_name"].ToString();
+            string newName = args["new_name"].ToString();
+
+            using (Transaction tr = doc.TransactionManager.StartTransaction())
+            {
+                BlockTable bt = (BlockTable)tr.GetObject(doc.Database.BlockTableId, OpenMode.ForWrite);
+                
+                if (!bt.Has(oldName)) return $"Block '{oldName}' not found.";
+                if (bt.Has(newName)) return $"Block '{newName}' already exists.";
+
+                BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bt[oldName], OpenMode.ForWrite);
+                btr.Name = newName;
+                
+                tr.Commit();
+            }
+            return $"Renamed block '{oldName}' to '{newName}'.";
+        }
+
+        private static string UpdateBlockDescription(Document doc, Dictionary<string, object> args)
+        {
+            string name = args["name"].ToString();
+            string desc = args["description"].ToString();
+
+            using (Transaction tr = doc.TransactionManager.StartTransaction())
+            {
+                BlockTable bt = (BlockTable)tr.GetObject(doc.Database.BlockTableId, OpenMode.ForRead);
+                
+                if (!bt.Has(name)) return $"Block '{name}' not found.";
+
+                BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bt[name], OpenMode.ForWrite);
+                btr.Comments = desc;
+                
+                tr.Commit();
+            }
+            return $"Updated description for block '{name}'.";
         }
 
         private static string FindOverlaps(Document doc, Dictionary<string, object> args)

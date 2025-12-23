@@ -69,6 +69,9 @@ pip install -r requirements.txt
    | `find_overlaps` | 查詢重疊線段 | layer (optional) |
    | `clean_overlaps` | 刪除重疊短線 | layer (optional) |
    | `connect_lines` | 線段接合確保 | layer, tolerance |
+   | `get_blocks_in_view` | 查詢視圖內圖塊 | 無 |
+   | `rename_block` | 重新命名圖塊 | old_name, new_name |
+   | `update_block_description` | 更新圖塊描述 | name, description |
 
 ---
 
