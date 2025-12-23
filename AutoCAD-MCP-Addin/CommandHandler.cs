@@ -268,6 +268,10 @@ namespace AutoCADMCP.Server
 
         private static bool AreLinesOverlapping(Line l1, Line l2)
         {
+            // Check for degenerate lines (zero length)
+            if (l1.Length < Tolerance.Global.EqualPoint || l2.Length < Tolerance.Global.EqualPoint)
+                return false;
+
             // 1. Check if parallel (Cross product of direction vectors ~ 0)
             Vector3d v1 = l1.EndPoint - l1.StartPoint;
             Vector3d v2 = l2.EndPoint - l2.StartPoint;
@@ -518,6 +522,65 @@ namespace AutoCADMCP.Server
             {
                 return $"Error setting layer color: {ex.Message}";
             }
+        }
+
+        private static string ConnectLines(Document doc, Dictionary<string, object> args)
+        {
+            string layerFilter = args.ContainsKey("layer") ? args["layer"].ToString() : null;
+            double tolerance = args.ContainsKey("tolerance") ? Convert.ToDouble(args["tolerance"]) : 10.0;
+            int connectCount = 0;
+
+            try
+            {
+                using (Transaction tr = doc.TransactionManager.StartTransaction())
+                {
+                    BlockTable bt = (BlockTable)tr.GetObject(doc.Database.BlockTableId, OpenMode.ForRead);
+                    BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
+
+                    List<Line> lines = GetAllLines(tr, btr, layerFilter);
+                    if (lines.Count > 5000) return "Error: Too many lines to process. Please filter by layer.";
+
+                    for (int i = 0; i < lines.Count; i++)
+                    {
+                        for (int j = i + 1; j < lines.Count; j++)
+                        {
+                            Line l1 = lines[i];
+                            Line l2 = lines[j];
+
+                            // Try to connect 4 endpoint combinations
+                            if (TrySnap(l1, l2, (p1, p2) => { l1.UpgradeOpen(); l1.StartPoint = p2; }, tolerance)) connectCount++;
+                            else if (TrySnap(l1, l2, (p1, p2) => { l1.UpgradeOpen(); l1.EndPoint = p2; }, tolerance)) connectCount++;
+                            else if (TrySnap(l2, l1, (p1, p2) => { l2.UpgradeOpen(); l2.StartPoint = p2; }, tolerance)) connectCount++;
+                            else if (TrySnap(l2, l1, (p1, p2) => { l2.UpgradeOpen(); l2.EndPoint = p2; }, tolerance)) connectCount++;
+                        }
+                    }
+                    tr.Commit();
+                }
+                return $"Successfully connected {connectCount} line endpoints within {tolerance}mm tolerance.";
+            }
+            catch (Exception ex)
+            {
+                return $"Error connecting lines: {ex.Message}";
+            }
+        }
+
+        private static bool TrySnap(Line moveLine, Line stayLine, Action<Point3d, Point3d> updateAction, double tol)
+        {
+            Point3d[] p1s = { moveLine.StartPoint, moveLine.EndPoint };
+            Point3d[] p2s = { stayLine.StartPoint, stayLine.EndPoint };
+
+            foreach (var p1 in p1s)
+            {
+                foreach (var p2 in p2s)
+                {
+                    if (p1.DistanceTo(p2) > 0 && p1.DistanceTo(p2) <= tol)
+                    {
+                        updateAction(p1, p2);
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
     }
 }

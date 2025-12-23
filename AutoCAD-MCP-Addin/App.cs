@@ -79,6 +79,12 @@ namespace AutoCADMCP
             tab.IsActive = true;
         }
 
+        [CommandMethod("STARTMCP")]
+        public void StartMcpCommand()
+        {
+            Server.SocketServer.Start();
+        }
+
         private void StartServer(object parameter)
         {
             Server.SocketServer.Start();
