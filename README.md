@@ -11,13 +11,9 @@
 
 | 組件 | 用途 | 備註 |
 |------|------|------|
+| **Python 3.8+** | 執行 MCP Server | [下載 Python 3.12](https://www.python.org/downloads/) |
 | **.NET SDK 8.0+** | 編譯 C# Add-in | 必要 |
 | **AutoCAD 完整版** | 2021-2024 | *不支援 LT 版* |
-| **Python 3.8+** 或 **Node.js 18+** | 執行 MCP Server | 二選一 |
-
-### MCP Server 語言選擇
-- **Python (推薦)**：使用 `MCP-Server/server.py`，支援完整 MCP 協定。
-- **Node.js (替代)**：使用 `bridge.js`，適合已有 Node.js 環境的使用者。
 
 ---
 
