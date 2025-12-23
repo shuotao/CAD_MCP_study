@@ -9,12 +9,26 @@
 
 ## 🏗️ 系統架構
 
+本專案支援兩種運作模式：
+
+### 模式 A：外部 AI 平台 (Claude/Gemini/VS Code)
 ```
-Claude/Gemini (AI)
-      ↓ MCP Protocol
-MCP-Server (Python Client)
-      ↓ Socket (127.0.0.1:8964)
-AutoCADMCP.dll (C# Server)
+外部 AI 平台 (Claude Desktop / VS Code / Antigravity)
+      ↓ MCP Protocol (stdio)
+MCP-Server (Python)
+      ↓ TCP Socket (127.0.0.1:8964)
+AutoCADMCP.dll (C# Add-in)
+      ↓ .NET API
+AutoCAD
+```
+
+### 模式 B：內嵌 Add-in 聊天視窗 (開發中)
+```
+AutoCAD Ribbon 內嵌聊天視窗
+      ↓ HTTP API (OpenAI/Azure)
+AI 雲端服務
+      ↓ 回傳指令
+AutoCADMCP.dll (C# Add-in)
       ↓ .NET API
 AutoCAD
 ```
@@ -75,11 +89,13 @@ pip install -r requirements.txt
   "mcpServers": {
     "autocad": {
       "command": "python",
-      "args": ["C:\\Users\\01102088\\Desktop\\AUTODESK MCP\\MCP-Server\\server.py"]
+      "args": ["<YOUR_PROJECT_PATH>\\MCP-Server\\server.py"]
     }
   }
 }
 ```
+
+> ⚠️ 請將 `<YOUR_PROJECT_PATH>` 替換為您的實際專案路徑，例如 `C:\Projects\AutoCAD-MCP`
 
 > 📁 範例檔案：`configs/claude_desktop.json`
 
@@ -115,11 +131,13 @@ pip install -r requirements.txt
     "autocad": {
       "command": "python",
       "args": ["MCP-Server/server.py"],
-      "cwd": "C:\\Users\\01102088\\Desktop\\AUTODESK MCP"
+      "cwd": "<YOUR_PROJECT_PATH>"
     }
   }
 }
 ```
+
+> ⚠️ 請將 `<YOUR_PROJECT_PATH>` 替換為您的實際專案路徑
 
 > 📁 範例檔案：`configs/antigravity_settings.json`
 

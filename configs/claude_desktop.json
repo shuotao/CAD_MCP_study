@@ -3,7 +3,7 @@
     "autocad": {
       "command": "python",
       "args": [
-        "C:\\Users\\01102088\\Desktop\\AUTODESK MCP\\MCP-Server\\server.py"
+        "<YOUR_PROJECT_PATH>\\MCP-Server\\server.py"
       ]
     }
   }

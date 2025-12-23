@@ -5,7 +5,7 @@
             "args": [
                 "MCP-Server/server.py"
             ],
-            "cwd": "C:\\Users\\01102088\\Desktop\\AUTODESK MCP"
+            "cwd": "<YOUR_PROJECT_PATH>"
         }
     }
 }
